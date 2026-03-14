@@ -1,0 +1,25 @@
+[package]
+name = "shieldagi-tools"
+version = "0.1.0"
+edition = "2021"
+description = "Custom security tools for ShieldAGI — OpenFang fork extensions"
+authors = ["ShieldAGI Team"]
+license = "Proprietary"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+regex = "1"
+chrono = { version = "0.4", features = ["serde"] }
+url = "2"
+ipnet = "2"
+trust-dns-resolver = "0.23"
+uuid = { version = "1", features = ["v4"] }
+tracing = "0.1"
+thiserror = "2"
+
+[dev-dependencies]
+tokio-test = "0.4"
+wiremock = "0.6"

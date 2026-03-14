@@ -1,0 +1,108 @@
+{
+  "dashboard": {
+    "title": "ShieldAGI Security Dashboard",
+    "description": "Real-time security monitoring for ShieldAGI protected platforms",
+    "tags": ["shieldagi", "security"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "panels": [
+      {
+        "title": "Threat Level",
+        "type": "gauge",
+        "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 1, "color": "yellow" },
+                { "value": 2, "color": "orange" },
+                { "value": 3, "color": "red" },
+                { "value": 4, "color": "dark-red" }
+              ]
+            },
+            "min": 0, "max": 4,
+            "mappings": [
+              { "type": "value", "options": { "0": { "text": "CLEAR" }, "1": { "text": "LOW" }, "2": { "text": "MEDIUM" }, "3": { "text": "HIGH" }, "4": { "text": "CRITICAL" } } }
+            ]
+          }
+        },
+        "targets": [{ "expr": "shieldagi_sentinel_threat_level" }]
+      },
+      {
+        "title": "Threats Detected (24h)",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+        "targets": [{ "expr": "increase(shieldagi_sentinel_threats_detected[24h])" }]
+      },
+      {
+        "title": "Blocked IPs",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+        "targets": [{ "expr": "shieldagi_sentinel_blocked_ips" }]
+      },
+      {
+        "title": "Mean Time to Contain",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+        "fieldConfig": { "defaults": { "unit": "s" } },
+        "targets": [{ "expr": "shieldagi_incident_mean_time_to_contain" }]
+      },
+      {
+        "title": "Threat Timeline",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 6 },
+        "targets": [
+          { "expr": "rate(shieldagi_sentinel_threats_detected[5m])", "legendFormat": "Threats/min" },
+          { "expr": "rate(shieldagi_sentinel_false_positives[5m])", "legendFormat": "False positives/min" }
+        ]
+      },
+      {
+        "title": "Attack Type Distribution",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+        "targets": [{ "expr": "shieldagi_attacks_by_type" }]
+      },
+      {
+        "title": "Vulnerability Status",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+        "targets": [
+          { "expr": "shieldagi_vulns_fixed", "legendFormat": "Fixed" },
+          { "expr": "shieldagi_vulns_pending", "legendFormat": "Pending" },
+          { "expr": "shieldagi_vulns_monitoring", "legendFormat": "Monitoring" }
+        ]
+      },
+      {
+        "title": "Agent Activity",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 22 },
+        "targets": [
+          { "expr": "shieldagi_agent_active{agent='sentinel'}", "legendFormat": "Sentinel" },
+          { "expr": "shieldagi_agent_active{agent='dep-guardian'}", "legendFormat": "Dep Guardian" },
+          { "expr": "shieldagi_agent_active{agent='incident-responder'}", "legendFormat": "Incident Responder" }
+        ]
+      },
+      {
+        "title": "Dependencies Health",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 8, "x": 0, "y": 30 },
+        "targets": [{ "expr": "shieldagi_deps_monitored" }],
+        "fieldConfig": { "defaults": { "displayName": "Monitored" } }
+      },
+      {
+        "title": "CVEs Found",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 8, "x": 8, "y": 30 },
+        "targets": [{ "expr": "shieldagi_deps_vulns_found" }],
+        "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 1, "color": "red" }] } } }
+      },
+      {
+        "title": "Auto-Patched",
+        "type": "stat",
+        "gridPos": { "h": 6, "w": 8, "x": 16, "y": 30 },
+        "targets": [{ "expr": "shieldagi_deps_auto_patched" }]
+      }
+    ]
+  }
+}

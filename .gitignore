@@ -1,0 +1,38 @@
+# Environment
+.env
+.env.local
+.env.production
+
+# Rust
+target/
+Cargo.lock
+
+# Node
+node_modules/
+package-lock.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+vulndb-data/
+
+# Scan results (may contain sensitive data)
+results/
+*.report.json
+
+# OpenFang runtime
+.openfang/
+daemon.json

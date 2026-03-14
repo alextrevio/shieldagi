@@ -1,0 +1,97 @@
+version: '3.8'
+
+# ShieldAGI Sandbox Environment
+# All pentesting tools and attack simulations run inside this isolated network.
+# NEVER connect this network to production infrastructure.
+
+services:
+  # ═══════════════════════════════════════════════
+  # PENTESTING TOOLBOX
+  # Contains: nmap, sqlmap, nuclei, nikto, ffuf, gobuster, semgrep,
+  #           trufflehog, gitleaks, hydra, curl, python3
+  # ═══════════════════════════════════════════════
+  pentest-tools:
+    build:
+      context: .
+      dockerfile: Dockerfile.pentest
+    container_name: shieldagi-pentest
+    networks:
+      - sandbox
+    volumes:
+      - pentest-workspace:/workspace
+      - pentest-results:/results
+    environment:
+      - SHIELDAGI_MODE=sandbox
+      - MAX_SCAN_DURATION=3600
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp:size=512M
+
+  # ═══════════════════════════════════════════════
+  # VULNERABLE TEST APPLICATION
+  # A deliberately vulnerable Express app for testing.
+  # Contains ALL OWASP Top 10 vulnerabilities by design.
+  # ═══════════════════════════════════════════════
+  vulnerable-app:
+    build:
+      context: ../tests/vulnerable-app
+      dockerfile: Dockerfile
+    container_name: shieldagi-vulnapp
+    networks:
+      - sandbox
+    ports:
+      - "3001:3000"  # Accessible for testing only
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgres://vulnuser:vulnpass@vulndb:5432/vulndb
+      - JWT_SECRET=super-weak-secret-for-testing
+      - SESSION_SECRET=another-weak-secret
+    depends_on:
+      - vulndb
+
+  # ═══════════════════════════════════════════════
+  # VULNERABLE DATABASE
+  # PostgreSQL with intentionally weak configuration
+  # ═══════════════════════════════════════════════
+  vulndb:
+    image: postgres:16-alpine
+    container_name: shieldagi-vulndb
+    networks:
+      - sandbox
+    environment:
+      - POSTGRES_USER=vulnuser
+      - POSTGRES_PASSWORD=vulnpass
+      - POSTGRES_DB=vulndb
+    volumes:
+      - vulndb-data:/var/lib/postgresql/data
+      - ../tests/vulnerable-app/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # ═══════════════════════════════════════════════
+  # REDIS (for rate limiting tests)
+  # ═══════════════════════════════════════════════
+  redis:
+    image: redis:7-alpine
+    container_name: shieldagi-redis
+    networks:
+      - sandbox
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+
+networks:
+  sandbox:
+    driver: bridge
+    internal: true  # NO external internet access
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  pentest-workspace:
+  pentest-results:
+  vulndb-data:
