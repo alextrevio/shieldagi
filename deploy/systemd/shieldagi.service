@@ -1,0 +1,38 @@
+[Unit]
+Description=ShieldAGI 2.0 — Autonomous Cyber Defense Platform
+Documentation=https://github.com/shieldagi/shieldagi
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/shieldagi
+EnvironmentFile=/opt/shieldagi/.env
+
+ExecStartPre=/usr/bin/docker compose pull --quiet
+ExecStart=/usr/bin/docker compose -f docker-compose.yml up -d --remove-orphans
+ExecStop=/usr/bin/docker compose -f docker-compose.yml down
+ExecReload=/usr/bin/docker compose -f docker-compose.yml restart
+
+# Restart policy
+Restart=on-failure
+RestartSec=30s
+
+# Security hardening
+ProtectSystem=full
+PrivateTmp=true
+NoNewPrivileges=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=shieldagi
+
+# Timeout for docker compose operations
+TimeoutStartSec=300
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target

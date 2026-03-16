@@ -129,6 +129,8 @@ pub async fn tool_run_remediation(input: &serde_json::Value) -> Result<String, S
 
     let start = std::time::Instant::now();
 
+    // Pipeline struct tracks state for observability / future serialization.
+    #[allow(unused_variables, unused_mut)]
     let mut pipeline = RemediationPipeline::new(
         report_path.to_string(),
         repo_path.to_string(),
@@ -164,20 +166,21 @@ pub async fn tool_run_remediation(input: &serde_json::Value) -> Result<String, S
 
     let ordered_vulns = plan_fix_order(&vulnerabilities);
 
-    // Group by affected file to detect conflicts
-    let mut file_groups: HashMap<String, Vec<usize>> = HashMap::new();
-    for (idx, vuln) in ordered_vulns.iter().enumerate() {
-        if let Some(files) = vuln["affected_files"].as_array() {
-            for f in files {
-                if let Some(path) = f["path"].as_str().or_else(|| f.as_str()) {
-                    file_groups
-                        .entry(path.to_string())
-                        .or_default()
-                        .push(idx);
+    // Build file → [vuln_index] map to detect multi-vuln file conflicts (informational).
+    // Fixes are still applied sequentially; this map is available for future scheduling.
+    let _file_groups: HashMap<String, Vec<usize>> = {
+        let mut m: HashMap<String, Vec<usize>> = HashMap::new();
+        for (idx, vuln) in ordered_vulns.iter().enumerate() {
+            if let Some(files) = vuln["affected_files"].as_array() {
+                for f in files {
+                    if let Some(path) = f["path"].as_str().or_else(|| f.as_str()) {
+                        m.entry(path.to_string()).or_default().push(idx);
+                    }
                 }
             }
         }
-    }
+        m
+    };
 
     // ── Phase 3: Git branch setup ────────────────────────────────────────────
     git_setup_branch(repo_path, &branch_name)?;

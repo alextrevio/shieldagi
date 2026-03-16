@@ -109,7 +109,10 @@ tools = [
     "knowledge_store",
     "knowledge_query",
     "shell",
-    "file_read"
+    "file_read",
+    "run_sentinel_cycle",
+    "send_telegram_alert",
+    "trigger_focused_scan"
 ]
 
 [channels]

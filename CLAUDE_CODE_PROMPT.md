@@ -8,54 +8,52 @@ You are building ShieldAGI 2.0, an autonomous cyber defense platform. This file 
 - [x] Full repository structure with README
 - [x] 5 agent manifests (recon-scout, code-auditor, attack-executor, vuln-reporter, shield-remediator)
 - [x] 3 Hand manifests with SKILL.md (sentinel, dep-guardian, incident-responder)
-- [x] 14 Rust tool definitions with schemas (nmap_scan + header_audit fully implemented, rest are stubs)
+- [x] 14 Rust tool definitions with schemas
 - [x] Tool registry (lib.rs) with routing to all tools
 - [x] 10 remediation playbooks (SQLi, XSS, CSRF, Auth, SSRF, Rate Limiting, Traversal, IDOR, Misconfig, Dependencies)
 - [x] 4 Chain Walls implementations (Next.js, Express, Supabase Edge Functions, Django)
 - [x] Docker sandbox (docker-compose.yml + Dockerfile.pentest)
 - [x] Deliberately vulnerable test app (Express + PostgreSQL with all OWASP Top 10)
-- [x] Integration test suite (bash script testing all vulnerability vectors)
+- [x] Integration test suite
 - [x] Grafana dashboard configuration
 - [x] OpenFang fork integration guide
 - [x] Environment configuration template
 
-### Next: Phase B (Attack Engine) — Build these in order:
-1. Implement `sqlmap_attack.rs` fully (parse sqlmap XML output, handle all injection types)
-2. Implement `semgrep_scan.rs` (shell out to semgrep, parse JSON output, add custom ShieldAGI rules)
-3. Implement `secret_scan.rs` (run trufflehog + gitleaks, merge results)
-4. Implement `dep_audit.rs` (npm audit + pip-audit, parse JSON, cross-reference CVEs)
-5. Implement `xss_inject.rs` (headless Chromium via puppeteer/playwright, DOM mutation detection)
-6. Implement `csrf_test.rs` (craft cross-origin requests, check token/origin validation)
-7. Implement `ssrf_probe.rs` (probe internal IPs, metadata endpoints, DNS rebinding)
-8. Implement `brute_force.rs` (rate limit detection, common credential testing)
-9. Implement `idor_test.rs` (multi-user context testing, sequential ID enumeration)
-10. Implement `path_traverse.rs` (multi-encoding bypass, null byte injection)
-11. Implement `rls_validate.rs` (Supabase schema inspection, policy completeness check)
-12. Implement `log_analyzer.rs` (pattern matching against attack signature database)
-13. Build Docker sandbox orchestration (programmatic container management from agents)
-14. End-to-end test: full Phase 1 scan of vulnerable app, verify all vulns are found
+### Completed (Phase B: Attack Engine)
+- [x] All 14 Rust security tools fully implemented (no stubs)
+- [x] nmap_scan, sqlmap_attack, xss_inject, csrf_test, ssrf_probe
+- [x] semgrep_scan, secret_scan, rls_validate, header_audit, dep_audit
+- [x] brute_force, idor_test, path_traverse, log_analyzer
+- [x] Docker sandbox orchestration
+- [x] End-to-end Phase 1 scan testing
 
-### Phase C (Remediation):
-1. Build Claude Code integration in shield-remediator agent
-2. Implement the remediation pipeline (read report → plan fixes → apply → test → PR)
-3. Build Chain Walls auto-injection (detect framework → insert correct middleware)
-4. Build Git PR generation with detailed descriptions
-5. Implement verify-after-fix loop (re-run attack tool to confirm)
+### Completed (Phase C: Remediation Engine)
+- [x] report_types.rs — VulnerabilityReport, Vulnerability, AttackChain structs with severity helpers
+- [x] framework_detect.rs — Auto-detect Next.js/Express/Django/Supabase/Rust frameworks
+- [x] remediation_engine.rs — 11 vulnerability category transformers with pattern-based code fixes
+- [x] remediation_pipeline.rs — Full pipeline orchestrator (plan → fix → test → verify → PR)
+- [x] chain_walls_injector.rs — Framework-specific Chain Walls auto-injection
+- [x] pr_generator.rs — Detailed GitHub PR generation with diffs and summary tables
+- [x] verify_fix.rs — Re-run attack tools to confirm fixes with confidence scoring
+- [x] shield-remediator agent.toml updated with new tool allowlist
 
-### Phase D (Sentinel):
-1. Wire up sentinel Hand with actual log ingestion
-2. Build anomaly detection with rolling baselines
-3. Wire up dep-guardian with CVE database queries
-4. Build incident-responder auto-patching pipeline
-5. Implement the continuous loop (Phase 3 → Phase 1 → Phase 2 → Phase 3)
-6. Configure Telegram alerting
+### Completed (Phase D: Sentinel — 24/7 Monitoring)
+- [x] sentinel_runtime.rs — Log parsing, signature matching, baseline anomaly detection
+- [x] telegram_alert.rs — Formatted security alerts via Telegram Bot API
+- [x] incident_engine.rs — Automated incident response, IP blocking, forensics
+- [x] dep_monitor.rs — Dependency monitoring, diff against previous scans, auto-patch PRs
+- [x] continuous_loop.rs — Phase 3→1→2 feedback loop with 30-min cooldown
+- [x] All Hand TOMLs updated with new tool allowlists
 
-### Phase E (Production):
-1. Test against real projects (Hoover, Arya AI, Selectia)
-2. Build onboarding CLI: `shieldagi connect <repo-url>`
-3. Performance optimization and parallel agent execution
-4. Self-audit: run ShieldAGI against itself
-5. Documentation and deployment guide
+### Completed (Phase E: Production Hardening)
+- [x] cli.rs — CLI onboarding (connect, status, scan, fix, sentinel subcommands)
+- [x] config.rs — Centralized config from shieldagi.toml + .env + env vars
+- [x] tests/self-audit.sh — Self-audit script
+- [x] tests/integration/ — 5 integration test scripts (phase1, phase2, phase3, chain_walls, e2e)
+- [x] docs/ — 8 documentation files (QUICK_START, ARCHITECTURE, AGENT_REFERENCE, HAND_REFERENCE, TOOL_REFERENCE, CHAIN_WALLS, PLAYBOOKS, DEPLOYMENT)
+- [x] deploy/ — Production configs (docker-compose, nginx, systemd, setup.sh)
+- [x] README.md updated with full documentation
+- [x] lib.rs verified — all 25+ tools registered and routed
 
 ## Architecture Rules
 - ALL pentesting tools run in Docker sandbox only (172.28.0.0/16 network)
@@ -72,6 +70,20 @@ You are building ShieldAGI 2.0, an autonomous cyber defense platform. This file 
 - Docker — Sandbox isolation for attack execution
 - nmap, sqlmap, nuclei, semgrep, trufflehog, gitleaks — Pentesting tools
 - PostgreSQL + SQLite — Data persistence
-- Redis — Rate limiting
+- Redis — Rate limiting and caching
 - Grafana — Dashboard
 - Telegram/Slack — Alerting
+
+## Tool Registry (25+ tools in tools/src/lib.rs)
+
+### Phase 1 — Scanning (14 tools)
+nmap_scan, sqlmap_attack, xss_inject, csrf_test, ssrf_probe, semgrep_scan, secret_scan, rls_validate, header_audit, dep_audit, brute_force, idor_test, path_traverse, log_analyzer
+
+### Phase 2 — Remediation (7 tools)
+remediation_engine, run_remediation, chain_walls_injector, pr_generator, verify_fix, detect_framework, report_types
+
+### Phase 3 — Monitoring (5 tools)
+run_sentinel_cycle, send_telegram_alert, respond_to_incident, check_dependencies, trigger_focused_scan
+
+### Utility (2 tools)
+cli_command, load_config
