@@ -8,6 +8,10 @@
 /// 2. Call `register_shieldagi_tools()` in tool_runner.rs initialization
 /// 3. Each tool becomes available to agents via their tool allowlist
 
+pub mod report_types;
+pub mod framework_detect;
+pub mod cli;
+pub mod config;
 pub mod nmap_scan;
 pub mod sqlmap_attack;
 pub mod xss_inject;
@@ -23,9 +27,15 @@ pub mod idor_test;
 pub mod path_traverse;
 pub mod log_analyzer;
 pub mod remediation_engine;
+pub mod remediation_pipeline;
 pub mod chain_walls_injector;
 pub mod pr_generator;
 pub mod verify_fix;
+pub mod dep_monitor;
+pub mod continuous_loop;
+pub mod sentinel_runtime;
+pub mod telegram_alert;
+pub mod incident_engine;
 
 use serde_json::json;
 
@@ -255,6 +265,21 @@ pub fn get_shieldagi_tools() -> Vec<ShieldToolDef> {
             }),
         },
         ShieldToolDef {
+            name: "run_remediation".into(),
+            description: "Phase C pipeline orchestrator: reads a JSON report from disk, plans fix order, applies code transforms, runs tests, verifies fixes, and returns a PipelineReport.".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "report_path": { "type": "string", "description": "Absolute path to the vulnerability report JSON file on disk" },
+                    "repo_path": { "type": "string", "description": "Path to cloned repository" },
+                    "branch_name": { "type": "string", "description": "Git branch name for the fix commits (default: auto-generated)" },
+                    "run_tests": { "type": "boolean", "description": "Run project tests after each fix and once at the end (default: true)" },
+                    "auto_verify": { "type": "boolean", "description": "Mark fixed vulns for verification by the verify_fix tool (default: true)" }
+                },
+                "required": ["report_path", "repo_path"]
+            }),
+        },
+        ShieldToolDef {
             name: "chain_walls_injector".into(),
             description: "Detect framework and inject Chain Walls 7-layer security middleware into project".into(),
             input_schema: json!({
@@ -280,6 +305,17 @@ pub fn get_shieldagi_tools() -> Vec<ShieldToolDef> {
                     "auto_push": { "type": "boolean", "description": "Push branch and create PR via gh CLI (default: false)" }
                 },
                 "required": ["repo_path", "remediation_result"]
+            }),
+        },
+        ShieldToolDef {
+            name: "detect_framework".into(),
+            description: "Auto-detect the web framework(s) used in a repository (Next.js, Express, Django, Supabase, Rust web, etc.)".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "repo_path": { "type": "string", "description": "Path to cloned repository" }
+                },
+                "required": ["repo_path"]
             }),
         },
         ShieldToolDef {
@@ -322,9 +358,13 @@ pub async fn execute_shieldagi_tool(
         "path_traverse" => path_traverse::tool_path_traverse(input).await,
         "log_analyzer" => log_analyzer::tool_log_analyzer(input).await,
         "remediation_engine" => remediation_engine::tool_remediation_engine(input).await,
+        "run_remediation" => remediation_pipeline::tool_run_remediation(input).await,
         "chain_walls_injector" => chain_walls_injector::tool_chain_walls_injector(input).await,
         "pr_generator" => pr_generator::tool_pr_generator(input).await,
         "verify_fix" => verify_fix::tool_verify_fix(input).await,
+        "detect_framework" => framework_detect::tool_detect_framework(input).await,
+        "cli_command" => cli::tool_cli_command(input).await,
+        "load_config" => config::tool_load_config(input).await,
         _ => Err(format!("Unknown ShieldAGI tool: {}", name)),
     }
 }
