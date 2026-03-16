@@ -22,6 +22,10 @@ pub mod brute_force;
 pub mod idor_test;
 pub mod path_traverse;
 pub mod log_analyzer;
+pub mod remediation_engine;
+pub mod chain_walls_injector;
+pub mod pr_generator;
+pub mod verify_fix;
 
 use serde_json::json;
 
@@ -234,6 +238,66 @@ pub fn get_shieldagi_tools() -> Vec<ShieldToolDef> {
                 "required": ["log_source"]
             }),
         },
+        ShieldToolDef {
+            name: "remediation_engine".into(),
+            description: "Apply automated security fixes from vulnerability report. Full pipeline: plan → fix → test → PR.".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "repo_path": { "type": "string", "description": "Path to cloned repository" },
+                    "report": { "type": "object", "description": "Vulnerability report from vuln-reporter agent" },
+                    "branch_name": { "type": "string", "description": "Git branch name for fixes (default: auto-generated)" },
+                    "auto_commit": { "type": "boolean", "description": "Auto-commit each fix (default: true)" },
+                    "run_tests": { "type": "boolean", "description": "Run project tests after fixes (default: true)" },
+                    "verify_fixes": { "type": "boolean", "description": "Re-run attack tools to verify fixes (default: true)" }
+                },
+                "required": ["repo_path", "report"]
+            }),
+        },
+        ShieldToolDef {
+            name: "chain_walls_injector".into(),
+            description: "Detect framework and inject Chain Walls 7-layer security middleware into project".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "repo_path": { "type": "string", "description": "Path to target repository" },
+                    "framework": { "type": "string", "enum": ["express", "nextjs", "django", "supabase"], "description": "Force framework (default: auto-detect)" },
+                    "shieldagi_root": { "type": "string", "description": "Path to ShieldAGI installation (default: /opt/shieldagi)" }
+                },
+                "required": ["repo_path"]
+            }),
+        },
+        ShieldToolDef {
+            name: "pr_generator".into(),
+            description: "Generate detailed GitHub Pull Request from remediation results with diffs and summary tables".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "repo_path": { "type": "string", "description": "Path to repository" },
+                    "remediation_result": { "type": "object", "description": "Output from remediation_engine tool" },
+                    "base_branch": { "type": "string", "description": "PR target branch (default: main)" },
+                    "title": { "type": "string", "description": "Custom PR title (default: auto-generated)" },
+                    "auto_push": { "type": "boolean", "description": "Push branch and create PR via gh CLI (default: false)" }
+                },
+                "required": ["repo_path", "remediation_result"]
+            }),
+        },
+        ShieldToolDef {
+            name: "verify_fix".into(),
+            description: "Re-run attack tools against remediated endpoints to confirm vulnerabilities are fixed".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "mode": { "type": "string", "enum": ["single", "batch"], "description": "Verify one or multiple vulnerabilities" },
+                    "vulnerability_id": { "type": "string", "description": "ID of the vulnerability to verify (single mode)" },
+                    "category": { "type": "string", "description": "Vulnerability category: sqli, xss, csrf, ssrf, idor, path-traversal, auth, misconfig, secrets" },
+                    "target_url": { "type": "string", "description": "Endpoint URL to test (must be sandbox)" },
+                    "parameter": { "type": "string", "description": "Parameter name for injection tests" },
+                    "vulnerabilities": { "type": "array", "description": "Array of vulnerabilities to verify (batch mode)" }
+                },
+                "required": ["mode"]
+            }),
+        },
     ]
 }
 
@@ -257,6 +321,10 @@ pub async fn execute_shieldagi_tool(
         "idor_test" => idor_test::tool_idor_test(input).await,
         "path_traverse" => path_traverse::tool_path_traverse(input).await,
         "log_analyzer" => log_analyzer::tool_log_analyzer(input).await,
+        "remediation_engine" => remediation_engine::tool_remediation_engine(input).await,
+        "chain_walls_injector" => chain_walls_injector::tool_chain_walls_injector(input).await,
+        "pr_generator" => pr_generator::tool_pr_generator(input).await,
+        "verify_fix" => verify_fix::tool_verify_fix(input).await,
         _ => Err(format!("Unknown ShieldAGI tool: {}", name)),
     }
 }
