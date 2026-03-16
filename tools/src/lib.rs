@@ -334,6 +334,111 @@ pub fn get_shieldagi_tools() -> Vec<ShieldToolDef> {
                 "required": ["mode"]
             }),
         },
+        ShieldToolDef {
+            name: "cli_command".into(),
+            description: "ShieldAGI CLI wrapper — routes onboarding subcommands (connect, status, scan, fix, sentinel) to the appropriate pipeline steps.".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "command": { "type": "string", "enum": ["connect", "status", "scan", "fix", "sentinel"], "description": "Subcommand to run" },
+                    "args": {
+                        "type": "object",
+                        "description": "Subcommand arguments",
+                        "properties": {
+                            "repo_url": { "type": "string", "description": "Repository URL (connect, scan)" },
+                            "report_path": { "type": "string", "description": "Path to vulnerability report JSON (fix)" },
+                            "action": { "type": "string", "enum": ["start", "stop", "status"], "description": "Sentinel lifecycle action" }
+                        }
+                    }
+                },
+                "required": ["command"]
+            }),
+        },
+        ShieldToolDef {
+            name: "load_config".into(),
+            description: "Load and validate ShieldAGI configuration from shieldagi.toml or environment variables".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "config_path": { "type": "string", "description": "Path to TOML config file (default: shieldagi.toml)" }
+                }
+            }),
+        },
+        ShieldToolDef {
+            name: "run_sentinel_cycle".into(),
+            description: "Run one Sentinel monitoring cycle: parse logs, match attack signatures, detect anomalies, return threats".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "log_source": { "type": "string", "description": "Path to log file to analyze" },
+                    "baseline_path": { "type": "string", "description": "Optional path to baseline metrics JSON for anomaly detection" },
+                    "time_range_minutes": { "type": "integer", "description": "Analyze only logs from last N minutes (default: 5)" }
+                },
+                "required": ["log_source"]
+            }),
+        },
+        ShieldToolDef {
+            name: "send_telegram_alert".into(),
+            description: "Send a formatted security threat alert to a Telegram chat via Bot API".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "bot_token": { "type": "string", "description": "Telegram Bot API token" },
+                    "chat_id": { "type": "string", "description": "Destination chat or channel ID" },
+                    "severity": { "type": "string", "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"], "description": "Threat severity level" },
+                    "title": { "type": "string", "description": "Short attack type description" },
+                    "description": { "type": "string", "description": "Detailed threat description" },
+                    "source_ip": { "type": "string", "description": "Attacker IP address" },
+                    "affected_endpoint": { "type": "string", "description": "Targeted URL or path" },
+                    "timestamp": { "type": "string", "description": "ISO-8601 event timestamp" },
+                    "correlation_id": { "type": "string", "description": "Correlation ID from sentinel cycle" },
+                    "recommended_action": { "type": "string", "description": "Suggested immediate response action" }
+                },
+                "required": ["bot_token", "chat_id", "severity", "title", "description", "source_ip", "affected_endpoint", "timestamp", "correlation_id", "recommended_action"]
+            }),
+        },
+        ShieldToolDef {
+            name: "respond_to_incident".into(),
+            description: "Automated incident response: correlate threat events, classify attack, generate containment actions and forensic report".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "threat_events": { "type": "array", "description": "Array of ThreatEvent objects from sentinel_runtime" },
+                    "auto_block": { "type": "boolean", "description": "Execute iptables block commands automatically (default: true)" },
+                    "repo_path": { "type": "string", "description": "Optional path to target repository for context" }
+                },
+                "required": ["threat_events"]
+            }),
+        },
+        ShieldToolDef {
+            name: "check_dependencies".into(),
+            description: "Dependency monitoring engine: audit deps, diff against previous scan, optionally auto-patch non-breaking vulns with PR branches".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "repo_path": { "type": "string", "description": "Path to cloned repository" },
+                    "previous_results_path": { "type": "string", "description": "Path to previous DepCheckResult JSON to diff against (optional)" },
+                    "auto_patch": { "type": "boolean", "description": "Auto-apply patches for non-breaking vulns and commit to branches (default: false)" }
+                },
+                "required": ["repo_path"]
+            }),
+        },
+        ShieldToolDef {
+            name: "trigger_focused_scan".into(),
+            description: "Continuous loop controller: triggered by sentinel/incident/manual, maps attack vector to scan tool, enforces 30-min cooldown, escalates if needed".into(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "trigger_source": { "type": "string", "enum": ["sentinel", "incident", "manual"], "description": "What triggered this scan cycle" },
+                    "attack_vector": { "type": "string", "description": "Attack type: sqli, xss, ssrf, brute-force, traversal, idor, csrf, headers, secrets" },
+                    "target_url": { "type": "string", "description": "Sandbox target URL for the focused scan" },
+                    "repo_path": { "type": "string", "description": "Path to repository for remediation context" },
+                    "state_path": { "type": "string", "description": "Path to loop state JSON file for cooldown tracking (optional)" },
+                    "vulns_found": { "type": "integer", "description": "Pre-counted vuln count from caller (e.g., sentinel); used for remediation decisions" }
+                },
+                "required": ["trigger_source", "attack_vector"]
+            }),
+        },
     ]
 }
 
@@ -365,6 +470,11 @@ pub async fn execute_shieldagi_tool(
         "detect_framework" => framework_detect::tool_detect_framework(input).await,
         "cli_command" => cli::tool_cli_command(input).await,
         "load_config" => config::tool_load_config(input).await,
+        "run_sentinel_cycle" => sentinel_runtime::tool_run_sentinel_cycle(input).await,
+        "send_telegram_alert" => telegram_alert::tool_send_telegram_alert(input).await,
+        "respond_to_incident" => incident_engine::tool_respond_to_incident(input).await,
+        "check_dependencies" => dep_monitor::tool_check_dependencies(input).await,
+        "trigger_focused_scan" => continuous_loop::tool_trigger_focused_scan(input).await,
         _ => Err(format!("Unknown ShieldAGI tool: {}", name)),
     }
 }
