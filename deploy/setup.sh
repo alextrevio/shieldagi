@@ -5,7 +5,7 @@ set -euo pipefail
 # Run on a fresh Ubuntu 24.04 server
 
 INSTALL_DIR="/opt/shieldagi"
-REPO_URL="https://github.com/shieldagi/shieldagi.git"
+REPO_URL="https://github.com/alextrevio/shieldagi.git"
 
 echo "========================================="
 echo " ShieldAGI 2.0 — Server Setup"
