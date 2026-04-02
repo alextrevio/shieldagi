@@ -150,7 +150,11 @@ tools = [
     "git_branch",
     "git_commit",
     "git_pr",
-    "alert_send"
+    "alert_send",
+    "respond_to_incident",
+    "send_telegram_alert",
+    "trigger_focused_scan",
+    "verify_fix"
 ]
 
 [channels]

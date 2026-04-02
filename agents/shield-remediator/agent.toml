@@ -172,5 +172,12 @@ tools = [
     "claude_code_exec",
     "knowledge_store",
     "knowledge_query",
-    "shell"
+    "shell",
+    "remediation_engine",
+    "run_remediation",
+    "chain_walls_injector",
+    "pr_generator",
+    "verify_fix",
+    "detect_framework",
+    "load_config"
 ]
